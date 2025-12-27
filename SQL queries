@@ -1,0 +1,170 @@
+-- Working Data
+SELECT
+	YEAR(trans_date_trans_time) AS trans_year,
+	MONTH(trans_date_trans_time) AS trans_month,
+	amt,
+	category,
+	state,
+	city,
+	EXTRACT(YEAR FROM AGE(dob)) AS age,
+	gender,
+	job,
+	lat,
+	long,
+	merch_lat,
+	merch_long
+FROM 'fraudTest.csv';
+
+-- Finding NULL values before querying
+SELECT COUNT(*) AS count_null
+FROM 'fraudTest.csv'
+WHERE amt IS NULL
+   OR category IS NULL
+   OR state IS NULL
+   OR city IS NULL
+   OR EXTRACT(YEAR FROM AGE(dob)) IS NULL 
+   OR lat IS NULL
+   OR long IS NULL
+   OR merch_lat IS NULL
+   OR merch_long IS NULL;
+
+-- Total transactions for overview
+SELECT 
+	COUNT(is_fraud) AS total_transactions
+FROM 'fraudTest.csv';
+
+-- Count of cardholders
+SELECT COUNT(DISTINCT cc_num) AS count_cardholders
+FROM 'fraudTest.csv';
+
+-- Count of total fraud cases
+SELECT 
+	COUNT(*) AS total_fraud_cases
+FROM 'fraudTest.csv'
+WHERE is_fraud = 1;
+
+-- Fraud rate % over total transactions
+SELECT 
+    SUM(
+	CASE
+		WHEN is_fraud = 1
+		THEN 1 ELSE 0
+	END) * 100 / COUNT(*) AS fraud_rate_pct
+FROM 'fraudTest.csv';
+
+-- MAX Fraud amount
+SELECT 
+	MAX(amt) AS MAX_fraud_amount
+FROM 'fraudTest.csv'
+WHERE is_fraud = 1;
+
+-- Fraud cases and amount by Year and Month
+SELECT
+	EXTRACT(YEAR FROM trans_date_trans_time) as trans_year,
+	EXTRACT(MONTH FROM trans_date_trans_time) as month_number,
+    CASE 
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 1 THEN 'January'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 2 THEN 'February'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 3 THEN 'March'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 4 THEN 'April'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 5 THEN 'May'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 6 THEN 'June'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 7 THEN 'July'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 8 THEN 'August'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 9 THEN 'September'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 10 THEN 'October'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 11 THEN 'November'
+        WHEN EXTRACT(MONTH FROM trans_date_trans_time) = 12 THEN 'December'
+    END AS month_name,
+    ROUND(SUM(amt), 2) AS total_fraud_amount,
+	COUNT(*) AS total_fraud_cases
+FROM 'fraudTest.csv'
+WHERE is_fraud = 1
+GROUP BY trans_year, month_number
+ORDER BY trans_year, month_number;
+
+-- Top 5 Categories with the highest fraud amount.
+SELECT 
+	category,
+	ROUND(SUM(amt), 2) AS total_fraud_amount
+FROM 'fraudTest.csv'
+WHERE is_fraud = 1
+GROUP BY category
+ORDER BY total_fraud_amount DESC
+LIMIT 5;
+
+-- Top 5 Categories with the most count of fraud cases.
+SELECT 
+	category,
+	COUNT(*) AS total_fraud_cases
+FROM 'fraudTest.csv'
+WHERE is_fraud = 1
+GROUP BY category
+ORDER BY total_fraud_cases DESC
+LIMIT 5;
+
+-- MIN and MAX Age for creating age bracket.
+SELECT
+	MIN(EXTRACT(YEAR FROM AGE(dob))) AS min_age,
+	MAX(EXTRACT(YEAR FROM AGE(dob))) AS max_age
+FROM 'fraudTest.csv';
+
+-- Count of fraud cases by age bracket.
+SELECT
+	age_bracket,
+	COUNT(*) AS fraud_cases
+FROM (
+	SELECT
+	EXTRACT(YEAR FROM AGE(dob)) AS age,
+	CASE
+			WHEN age BETWEEN 20 AND 34 THEN '(20-34) Young Adult'
+			WHEN age BETWEEN 35 AND 49 THEN '(35-49) Mid Adult'
+			WHEN age BETWEEN 50 AND 64 THEN '(50-64) Adult'
+			WHEN age BETWEEN 65 AND 79 THEN '(65-79) Senior'
+			WHEN age >= 80 THEN '(80+) Late Senior'
+	END AS age_bracket,
+	FROM 'fraudTest.csv'
+	WHERE is_fraud = 1
+)
+GROUP BY age_bracket
+ORDER BY age_bracket;
+
+-- Average and Total fraud amount by age bracket.
+SELECT 
+    CASE
+        WHEN EXTRACT(YEAR FROM AGE(dob)) BETWEEN 20 AND 34 THEN '(20-34) Young Adult'
+        WHEN EXTRACT(YEAR FROM AGE(dob)) BETWEEN 35 AND 49 THEN '(35-49) Mid Adult'
+        WHEN EXTRACT(YEAR FROM AGE(dob)) BETWEEN 50 AND 64 THEN '(50-64) Adult'
+        WHEN EXTRACT(YEAR FROM AGE(dob)) BETWEEN 65 AND 79 THEN '(65-79) Senior'
+		WHEN EXTRACT(YEAR FROM AGE(dob)) >= 80 THEN '(80+) Late Senior'	
+    END AS age_bracket,
+    ROUND(AVG(amt), 2) AS avg_fraud_amount,
+    COUNT(*) AS total_fraud_count
+FROM 'fraudTest.csv'
+WHERE is_fraud = 1
+GROUP BY age_bracket
+ORDER BY age_bracket;
+
+-- Count of fraud cases per age 
+SELECT 
+    EXTRACT(YEAR FROM AGE(dob)) AS age,
+    COUNT(*) AS count_fraud_cases
+FROM 'fraudTest.csv'
+WHERE is_fraud = 1
+GROUP BY age
+ORDER BY count_fraud_cases DESC
+LIMIT 5;
+
+-- Commonalities by Demographic
+SELECT 
+    gender,
+	job,
+    EXTRACT(YEAR FROM AGE(dob)) AS age, 
+    state, 
+    COUNT(*) AS fraud_count,
+    ROUND(AVG(amt), 2) AS avg_fraud_value
+FROM 'fraudTest.csv'
+WHERE is_fraud = 1
+GROUP BY age, gender, job, state
+ORDER BY fraud_count DESC
+LIMIT 10;
