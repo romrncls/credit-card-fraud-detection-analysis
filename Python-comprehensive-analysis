@@ -1,0 +1,67 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from datetime import datetime
+
+# 1. Load the dataset
+df = pd.read_csv('fraudTest.csv')
+
+# Pre-processing for analysis
+df['trans_date_trans_time'] = pd.to_datetime(df['trans_date_trans_time'])
+df['dob'] = pd.to_datetime(df['dob'])
+df['age'] = (pd.Timestamp.now() - df['dob']).dt.days // 365
+df['hour'] = df['trans_date_trans_time'].dt.hour
+df['day_of_week'] = df['trans_date_trans_time'].dt.day_name()
+
+# Set visual style
+sns.set_theme(style="whitegrid")
+plt.rcParams['figure.figsize'] = (12, 6)
+
+# --- CHART 1: Class Imbalance (Fraud vs. Legitimate) ---
+plt.figure()
+sns.countplot(data=df, x='is_fraud', palette='viridis')
+plt.title('Distribution of Fraud vs. Legitimate Transactions')
+plt.xlabel('Is Fraud? (0 = No, 1 = Yes)')
+plt.show()
+
+# --- CHART 2: Transaction Amount Distribution (Log Scale) ---
+# We use a log scale because transaction amounts vary from $1 to $20,000+
+plt.figure()
+sns.histplot(data=df, x='amt', hue='is_fraud', bins=50, kde=True, log_scale=True, common_norm=False)
+plt.title('Distribution of Transaction Amounts (Log Scale)')
+plt.xlabel('Amount ($) - Log Scale')
+plt.show()
+
+# --- CHART 3: Fraud Rate by Category ---
+fraud_rate = df.groupby('category')['is_fraud'].mean().sort_values(ascending=False).reset_index()
+plt.figure()
+sns.barplot(data=fraud_rate, x='is_fraud', y='category', palette='magma')
+plt.title('Fraud Rate (Probability) by Category')
+plt.xlabel('Fraud Rate (%)')
+plt.show()
+
+# --- CHART 4: Fraud by Hour of the Day ---
+# This often reveals "Night Owl" fraud patterns
+hourly_fraud = df.groupby('hour')['is_fraud'].mean().reset_index()
+plt.figure()
+sns.lineplot(data=hourly_fraud, x='hour', y='is_fraud', marker='o', color='red')
+plt.title('Fraud Probability by Hour of Day')
+plt.xticks(range(0, 24))
+plt.ylabel('Fraud Rate')
+plt.show()
+
+# --- CHART 5: Age Distribution of Victims ---
+plt.figure()
+sns.kdeplot(data=df[df['is_fraud']==0], x='age', label='Legitimate', fill=True)
+sns.kdeplot(data=df[df['is_fraud']==1], x='age', label='Fraud', fill=True)
+plt.title('Age Distribution: Fraud Victims vs. Normal Users')
+plt.legend()
+plt.show()
+
+# --- CHART 6: Fraud by Gender ---
+plt.figure()
+sns.barplot(data=df, x='gender', y='is_fraud', estimator=np.mean)
+plt.title('Fraud Probability by Gender')
+plt.ylabel('Fraud Rate')
+plt.show()
